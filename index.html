@@ -1,0 +1,105 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Polymarket Export</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <style src="style.css"></style>
+</head>
+<body class="bg-gray-50 text-gray-800 min-h-screen flex flex-col items-center py-10 px-4">
+
+    <!-- Header -->
+    <header class="mb-8 text-center">
+        <h1 class="text-3xl font-bold text-blue-600 mb-2">Polymarket PnL Exporter</h1>
+        <p class="text-gray-500">Analyze and export daily net value history</p>
+    </header>
+
+    <!-- App Container -->
+    <main class="w-full max-w-4xl bg-white shadow-lg rounded-xl overflow-hidden">
+        
+        <!-- Controls Section -->
+        <section class="p-6 border-b border-gray-100 bg-gray-50/50">
+            <form id="config-form" class="grid grid-cols-1 md:grid-cols-4 gap-4 items-end">
+                
+                <!-- Address Input -->
+                <div class="md:col-span-2">
+                    <label for="input-address" class="block text-sm font-medium text-gray-700 mb-1">User Address (0x...)</label>
+                    <input type="text" id="input-address" name="user_address" 
+                        placeholder="0x..." 
+                        class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors"
+                        required>
+                </div>
+
+                <!-- Interval Input -->
+                <div>
+                    <label for="input-interval" class="block text-sm font-medium text-gray-700 mb-1">Interval</label>
+                    <input type="text" id="input-interval" name="interval" 
+                        value="all" 
+                        class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                        placeholder="e.g. all">
+                </div>
+
+                <!-- Fidelity Input -->
+                <div>
+                    <label for="input-fidelity" class="block text-sm font-medium text-gray-700 mb-1">Fidelity</label>
+                    <input type="text" id="input-fidelity" name="fidelity" 
+                        value="1d" 
+                        class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                        placeholder="e.g. 1d">
+                </div>
+
+                <!-- Submit Action -->
+                <div class="md:col-span-4 mt-2">
+                    <button type="submit" id="btn-load" class="w-full md:w-auto bg-blue-600 hover:bg-blue-700 text-white font-medium py-2 px-6 rounded-md transition-colors flex items-center justify-center gap-2">
+                        <span>Load Data</span>
+                        <div id="spinner" class="loader ease-linear rounded-full border-2 border-t-2 border-white h-5 w-5 hidden"></div>
+                    </button>
+                </div>
+            </form>
+            
+            <!-- Feedback -->
+            <div id="error-display" class="hidden mt-4 p-3 bg-red-100 border border-red-200 text-red-700 rounded-md text-sm"></div>
+        </section>
+
+        <!-- Visualization Section -->
+        <section id="results-view" class="hidden">
+            <div class="px-6 py-4 flex justify-between items-center border-b border-gray-100">
+                <h2 class="text-lg font-semibold text-gray-800">Performance</h2>
+                <button id="btn-export" class="bg-green-600 hover:bg-green-700 text-white text-sm font-medium py-2 px-4 rounded-md transition-colors flex items-center gap-2">
+                    <!-- Download Icon -->
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"></path></svg>
+                    Export CSV
+                </button>
+            </div>
+
+            <!-- Graph -->
+            <div class="p-6 h-80 w-full relative">
+                <canvas id="chart-canvas"></canvas>
+            </div>
+
+            <!-- Grid -->
+            <div class="border-t border-gray-100">
+                <div class="bg-gray-50 px-6 py-2 border-b border-gray-200 text-xs font-semibold text-gray-500 uppercase tracking-wider grid grid-cols-2">
+                    <div>Date</div>
+                    <div class="text-right">Net Value ($)</div>
+                </div>
+                <div class="max-h-64 overflow-y-auto scrollbar-hide">
+                    <table class="min-w-full divide-y divide-gray-200">
+                        <tbody id="table-body" class="bg-white divide-y divide-gray-200">
+                            <!-- JS Injects Rows Here -->
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </section>
+    </main>
+
+    <footer class="mt-8 text-xs text-gray-400">
+        Polymarket API Client. Runs 100% locally in browser.
+    </footer>
+
+    <script src="script.js"></script>
+</body>
+</html>
