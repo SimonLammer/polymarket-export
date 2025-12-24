@@ -1,5 +1,6 @@
 <!DOCTYPE html>
 <html lang="en">
+<!-- Created by AI (Gemini) -->
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -82,6 +83,24 @@
                         placeholder="e.g. 1d">
                 </div>
 
+                <!-- Opening Balance Input -->
+                <div class="md:col-span-4">
+                    <label for="input-opening-balance" class="block text-sm font-medium text-gray-700 mb-1">
+                        Opening Balance (Optional) 
+                        <span class="text-gray-400 font-normal ml-1">- used for "Net Value" column</span>
+                    </label>
+                    <div class="relative">
+                        <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                            <span class="text-gray-500 sm:text-sm">$</span>
+                        </div>
+                        <input type="number" id="input-opening-balance" name="opening_balance" 
+                            step="0.01" 
+                            value="0" 
+                            class="w-full pl-7 px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                            placeholder="0.00">
+                    </div>
+                </div>
+
                 <!-- Submit Action -->
                 <div class="md:col-span-4 mt-2">
                     <button type="submit" id="btn-load" class="w-full md:w-auto bg-blue-600 hover:bg-blue-700 text-white font-medium py-2 px-6 rounded-md transition-colors flex items-center justify-center gap-2">
@@ -95,10 +114,11 @@
             <div class="mt-4 flex flex-col gap-2">
                 <div id="error-display" class="hidden p-3 bg-red-100 border border-red-200 text-red-700 rounded-md text-sm"></div>
                 
-                <!-- Resolved Info -->
-                <div id="resolved-info" class="hidden flex items-center gap-1 text-xs text-gray-500 px-1">
-                    <svg class="w-3 h-3 text-blue-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
-                    <span>Resolved: <span id="resolved-address-text" class="font-mono text-gray-600 font-medium"></span></span>
+                <div class="flex justify-between items-center text-xs text-gray-500 px-1">
+                    <div id="resolved-info" class="hidden flex items-center gap-1">
+                        <svg class="w-3 h-3 text-blue-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
+                        <span>Resolved: <span id="resolved-address-text" class="font-mono text-gray-600 font-medium"></span></span>
+                    </div>
                 </div>
             </div>
         </section>
@@ -143,9 +163,31 @@
 
             <!-- Grid -->
             <div class="border-t border-gray-100">
-                <div class="bg-gray-50 px-6 py-2 border-b border-gray-200 text-xs font-semibold text-gray-500 uppercase tracking-wider grid grid-cols-2">
+                <div class="bg-gray-50 px-6 py-2 border-b border-gray-200 text-xs font-semibold text-gray-500 uppercase tracking-wider grid grid-cols-4">
                     <div>Date</div>
-                    <div class="text-right">Net Value ($)</div>
+                    <div class="text-right">Profit / Loss</div>
+                    
+                    <!-- Tooltip Header: Net Value (from Current) -->
+                    <div class="text-right text-gray-400 flex justify-end items-center gap-1 group relative cursor-help">
+                        <span class="text-right">Net Value<br><span class="text-[10px]">(from Current)</span></span>
+                        <svg class="w-4 h-4 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                        </svg>
+                        <div class="absolute bottom-full mb-2 right-0 w-56 p-2 bg-gray-800 text-white text-xs rounded shadow-lg opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none z-10 normal-case font-normal text-left">
+                            Calculated backwards using your <b>Current Total Value</b>. It subtracts historical profit/loss from today's balance. <br><br><i>Note: This assumes no deposits/withdrawals occurred during the timeframe.</i>
+                        </div>
+                    </div>
+
+                    <!-- Tooltip Header: Net Value -->
+                    <div class="text-right font-bold flex justify-end items-center gap-1 group relative cursor-help">
+                        <span>Net Value</span>
+                        <svg class="w-4 h-4 text-gray-800" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                        </svg>
+                        <div class="absolute bottom-full mb-2 right-0 w-56 p-2 bg-gray-800 text-white text-xs rounded shadow-lg opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none z-10 normal-case font-normal text-left">
+                            Calculated forwards using your <b>Opening Balance</b>. It adds the daily profit/loss to your starting amount. <br><br><i>Recommended if you know your exact starting capital.</i>
+                        </div>
+                    </div>
                 </div>
                 <div class="max-h-64 overflow-y-auto scrollbar-hide">
                     <table class="min-w-full divide-y divide-gray-200">
@@ -174,21 +216,18 @@
          * Configuration & Constants
          */
         const CONFIG = {
-            // Polymarket APIs
             PNL_API_BASE: "https://user-pnl-api.polymarket.com/user-pnl",
             POSITION_API: "https://data-api.polymarket.com/value",
             USE_PROXY_FOR_POLYMARKET: false, 
 
-            // Profile Search
             PROFILE_SEARCH_API: "https://polywallet.info/api/gamma-search",
             USE_PROXY_FOR_PROFILE: true, 
 
-            // RPC / Blockchain
             RPC_URL: "https://polygon-rpc.com",
             USDC_CONTRACT: "0x2791Bca1f2de4661ED88A30C99A7a9449Aa84174",
 
-            // Utilities - Switched to a more robust proxy
-            CORS_PROXY: "https://corsproxy.io/?"
+            // Using single proxy as requested
+            CORS_PROXY: "https://api.allorigins.win/raw?url="
         };
 
         /**
@@ -196,21 +235,17 @@
          */
         class PolymarketExporter {
             constructor() {
-                // State
                 this.data = [];
                 this.chart = null;
-                this.currentValues = {
-                    cash: 0,
-                    positions: 0
-                };
+                this.currentValues = { cash: 0, positions: 0 };
 
-                // DOM Elements
                 this.dom = {
                     form: document.getElementById('config-form'),
                     inputs: {
                         identifier: document.getElementById('input-identifier'),
                         interval: document.getElementById('input-interval'),
-                        fidelity: document.getElementById('input-fidelity')
+                        fidelity: document.getElementById('input-fidelity'),
+                        openingBalance: document.getElementById('input-opening-balance')
                     },
                     buttons: {
                         load: document.getElementById('btn-load'),
@@ -224,7 +259,6 @@
                         chartCanvas: document.getElementById('chart-canvas').getContext('2d'),
                         resolvedInfo: document.getElementById('resolved-info'),
                         resolvedAddressText: document.getElementById('resolved-address-text'),
-                        // Summary Elements
                         displayCash: document.getElementById('display-cash'),
                         displayPositions: document.getElementById('display-positions'),
                         displayTotal: document.getElementById('display-total')
@@ -248,6 +282,7 @@
                 const rawInput = this.dom.inputs.identifier.value.trim();
                 const interval = this.dom.inputs.interval.value.trim() || 'all';
                 const fidelity = this.dom.inputs.fidelity.value.trim() || '1d';
+                const openingBalance = parseFloat(this.dom.inputs.openingBalance.value) || 0;
 
                 this.setLoading(true);
 
@@ -255,23 +290,23 @@
                     // 1. Resolve Address
                     const address = await this.resolveAddress(rawInput);
 
-                    // 2. Fetch All Data Concurrently (PnL History, Cash, Position Value)
+                    // 2. Fetch APIs
                     const [pnlData, cashBalance, posValue] = await Promise.all([
                         this.fetchPnLData({ address, interval, fidelity }),
                         this.fetchCashBalance(address).catch(err => { console.warn(err); return 0; }),
                         this.fetchPositionValue(address).catch(err => { console.warn(err); return 0; })
                     ]);
 
-                    // 3. Process Data
-                    this.data = this.processPnLData(pnlData);
-                    this.currentValues = {
-                        cash: cashBalance,
-                        positions: posValue
-                    };
-                    
-                    if (this.data.length === 0) throw new Error("No PnL history returned for this query.");
+                    if (!Array.isArray(pnlData) || pnlData.length === 0) {
+                        throw new Error("No PnL history returned for this query.");
+                    }
 
+                    // 3. Process Data
+                    this.processFinalData(pnlData, cashBalance, posValue, openingBalance);
+
+                    // 4. Update UI
                     this.renderUI();
+
                 } catch (error) {
                     console.error(error);
                     this.showError(error.message);
@@ -280,19 +315,47 @@
                 }
             }
 
+            processFinalData(pnlData, cash, pos, openingBalance) {
+                const currentTotal = cash + pos;
+                
+                // Sort PnL by time
+                const sortedPnl = pnlData.sort((a, b) => a.t - b.t);
+                const lastPnL = sortedPnl[sortedPnl.length - 1].p;
+                const firstPnL = sortedPnl[0].p;
+
+                // 1. Backward Calculation:
+                // Assumes 'LastPnL' is the total profit embedded in CurrentTotal
+                // BaselineBack = CurrentTotal - LastPnL
+                const baselineBack = currentTotal - lastPnL;
+
+                // 2. Forward Calculation (Normalized):
+                // We want the curve to START at 'openingBalance'.
+                // So at index 0, NetValue should be 'openingBalance'.
+                // Formula: OpeningBalance + (PnL_t - PnL_start)
+                // This removes the initial PnL offset.
+                const baselineForward = openingBalance - firstPnL;
+
+                this.data = sortedPnl.map(item => {
+                    const date = new Date(item.t * 1000);
+                    return {
+                        timestamp: item.t,
+                        dateStr: date.toISOString().split('T')[0], 
+                        pnl: item.p,
+                        netValueBack: baselineBack + item.p,
+                        netValueForward: baselineForward + item.p
+                    };
+                });
+
+                this.currentValues = { cash, positions: pos };
+            }
+
+            // ... [Helper Methods] ...
             async resolveAddress(input) {
-                // Case 1: Ethereum Address (starts with 0x)
                 if (input.startsWith('0x')) {
                     this.hideResolvedAddress();
                     return input;
                 }
-
-                // Case 2: Username (Assume username if not address)
-                let query = input;
-                if (!query.startsWith('@')) {
-                    query = '@' + query;
-                }
-
+                let query = input.startsWith('@') ? input : '@' + input;
                 const url = new URL(CONFIG.PROFILE_SEARCH_API);
                 url.searchParams.append('q', query);
                 url.searchParams.append('search_profiles', 'true');
@@ -300,19 +363,13 @@
                 url.searchParams.append('optimized', 'true');
 
                 const response = await this.fetchUrl(url.toString(), CONFIG.USE_PROXY_FOR_PROFILE);
-                
-                if (!response.ok) throw new Error("Failed to resolve username. Profile API error.");
-                
+                if (!response.ok) throw new Error("Failed to resolve username.");
                 const data = await response.json();
-                
-                if (data.profiles && data.profiles.length > 0) {
-                    const profile = data.profiles[0];
-                    if (profile.proxyWallet) {
-                        this.showResolvedAddress(profile.proxyWallet);
-                        return profile.proxyWallet;
-                    }
+                if (data.profiles?.[0]?.proxyWallet) {
+                    this.showResolvedAddress(data.profiles[0].proxyWallet);
+                    return data.profiles[0].proxyWallet;
                 }
-                throw new Error(`Username "${input}" not found or has no associated wallet.`);
+                throw new Error(`Username "${input}" not found.`);
             }
 
             async fetchPnLData({ address, interval, fidelity }) {
@@ -320,106 +377,65 @@
                 url.searchParams.append('user_address', address);
                 url.searchParams.append('interval', interval);
                 url.searchParams.append('fidelity', fidelity);
-
                 const response = await this.fetchUrl(url.toString(), CONFIG.USE_PROXY_FOR_POLYMARKET);
-                
-                if (!response.ok) {
-                    throw new Error(`PnL API Error: ${response.status} ${response.statusText}.`);
-                }
+                if (!response.ok) throw new Error("PnL API Error");
                 return await response.json();
             }
 
             async fetchPositionValue(address) {
-                // Endpoint: https://data-api.polymarket.com/value?user=ADDRESS
                 const url = new URL(CONFIG.POSITION_API);
                 url.searchParams.append('user', address);
-
                 const response = await this.fetchUrl(url.toString(), CONFIG.USE_PROXY_FOR_POLYMARKET);
-                
                 if (!response.ok) throw new Error("Position API Error");
-                
                 const json = await response.json();
-                
-                // Expects: [{"user":"...","value":245.8255}]
-                if (Array.isArray(json) && json.length > 0 && json[0].value !== undefined) {
-                    return parseFloat(json[0].value);
-                }
+                if (Array.isArray(json) && json.length > 0) return parseFloat(json[0].value);
                 return 0;
             }
 
             async fetchCashBalance(address) {
-                if (!address) throw new Error("fetchCashBalance: Address is missing");
-
                 const paddedAddress = address.replace('0x', '').padStart(64, '0');
-                const data = `0x70a08231${paddedAddress}`; // balanceOf(address)
-
                 const response = await fetch(CONFIG.RPC_URL, {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({
-                        jsonrpc: '2.0',
-                        id: 1,
-                        method: 'eth_call',
-                        params: [{
-                            to: CONFIG.USDC_CONTRACT,
-                            data: data
-                        }, 'latest']
+                        jsonrpc: '2.0', id: 1, method: 'eth_call',
+                        params: [{ to: CONFIG.USDC_CONTRACT, data: `0x70a08231${paddedAddress}` }, 'latest']
                     })
                 });
-
-                if (!response.ok) throw new Error("RPC network error");
-
+                if (!response.ok) throw new Error("RPC error");
                 const json = await response.json();
-                
                 if (json.error) throw new Error(json.error.message);
-                
-                const hexVal = json.result;
-                // USDC has 6 decimals
-                const balance = parseInt(hexVal, 16) / 1000000;
-                
-                return balance;
+                return parseInt(json.result, 16) / 1000000;
             }
 
-            // Unified fetch helper
             async fetchUrl(targetUrl, useProxy) {
-                let fetchUrl = targetUrl;
-                if (useProxy) {
-                    // Update: corsproxy.io uses ?url format
-                    fetchUrl = CONFIG.CORS_PROXY + encodeURIComponent(targetUrl);
+                // If no proxy needed, direct fetch
+                if (!useProxy) {
+                    try {
+                        return await fetch(targetUrl);
+                    } catch (err) {
+                        throw new Error("Direct Fetch Failed: " + err.message);
+                    }
                 }
 
+                // Use single proxy
+                const finalUrl = CONFIG.CORS_PROXY + encodeURIComponent(targetUrl);
+                
                 try {
-                    return await fetch(fetchUrl);
+                    const response = await fetch(finalUrl);
+                    if (!response.ok) throw new Error(`Proxy response status: ${response.status}`);
+                    return response;
                 } catch (err) {
-                    let msg = "Network Error.";
-                    if (useProxy) msg += " (Proxy failed)";
-                    else msg += " (Direct connection failed. Check CORS or API status)";
-                    throw new Error(msg + " " + err.message);
+                    throw new Error(`Proxy error: ${err.message}`);
                 }
             }
-
-            processPnLData(json) {
-                if (!Array.isArray(json)) {
-                     throw new Error("Invalid API response format. Expected an array.");
-                }
-
-                return json.map(item => {
-                    // API returns 't' in seconds, JS needs milliseconds
-                    const date = new Date(item.t * 1000);
-                    return {
-                        timestamp: item.t,
-                        // Format: YYYY-MM-DD
-                        dateStr: date.toISOString().split('T')[0], 
-                        value: item.p
-                    };
-                });
-            }
+            // ... [End Helpers] ...
 
             handleExport() {
                 if (!this.data.length) return;
 
-                const csvHeader = "Date,Net Value\n";
-                const csvRows = this.data.map(r => `${r.dateStr},${r.value}`).join("\n");
+                const csvHeader = "Date,Profit/Loss,Net Value (from Current),Net Value\n";
+                const csvRows = this.data.map(r => `${r.dateStr},${r.pnl},${r.netValueBack},${r.netValueForward}`).join("\n");
                 const csvContent = csvHeader + csvRows;
 
                 const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
@@ -446,7 +462,6 @@
 
             renderSummary() {
                 const fmt = (num) => '$' + num.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
-                
                 const cash = this.currentValues.cash;
                 const pos = this.currentValues.positions;
                 const total = cash + pos;
@@ -458,17 +473,24 @@
 
             renderTable() {
                 this.dom.ui.tableBody.innerHTML = '';
-                // Clone array and reverse to show newest first in table
                 const reversedData = [...this.data].reverse();
-
                 const fragment = document.createDocumentFragment();
                 reversedData.forEach(row => {
                     const tr = document.createElement('tr');
                     tr.className = "hover:bg-gray-50 transition-colors";
+                    const pnlClass = row.pnl >= 0 ? 'text-green-600' : 'text-red-600';
+                    const pnlSign = row.pnl >= 0 ? '+' : '';
+
                     tr.innerHTML = `
                         <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">${row.dateStr}</td>
-                        <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900 text-right font-mono font-medium">
-                            ${row.value.toFixed(2)}
+                        <td class="px-6 py-4 whitespace-nowrap text-sm ${pnlClass} text-right font-mono">
+                            ${pnlSign}${row.pnl.toFixed(2)}
+                        </td>
+                        <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-400 text-right font-mono">
+                            ${row.netValueBack.toFixed(2)}
+                        </td>
+                        <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900 text-right font-mono font-medium font-bold">
+                            ${row.netValueForward.toFixed(2)}
                         </td>
                     `;
                     fragment.appendChild(tr);
@@ -478,9 +500,9 @@
 
             renderChart() {
                 if (this.chart) this.chart.destroy();
-
                 const labels = this.data.map(d => d.dateStr);
-                const values = this.data.map(d => d.value);
+                // Plot the new Forward Calculated Net Value
+                const values = this.data.map(d => d.netValueForward);
                 
                 const isProfit = values[values.length - 1] >= values[0];
                 const color = isProfit ? 'rgb(22, 163, 74)' : 'rgb(220, 38, 38)';
@@ -516,19 +538,12 @@
                             }
                         },
                         scales: {
-                            x: { 
-                                grid: { display: false },
-                                ticks: { maxTicksLimit: 6 }
-                            },
-                            y: { 
-                                grid: { color: '#f3f4f6' }
-                            }
+                            x: { grid: { display: false }, ticks: { maxTicksLimit: 6 } },
+                            y: { grid: { color: '#f3f4f6' } }
                         }
                     }
                 });
             }
-
-            // --- Logic: UI Utilities ---
 
             setLoading(isLoading) {
                 this.dom.buttons.load.disabled = isLoading;
@@ -545,7 +560,6 @@
                 this.dom.ui.error.classList.add('hidden');
                 this.dom.ui.error.textContent = '';
                 this.dom.ui.results.classList.add('hidden');
-                // Reset Summary
                 this.dom.ui.displayCash.textContent = '--';
                 this.dom.ui.displayPositions.textContent = '--';
                 this.dom.ui.displayTotal.textContent = '--';
@@ -567,7 +581,6 @@
             }
         }
 
-        // Initialize App
         document.addEventListener('DOMContentLoaded', () => {
             new PolymarketExporter();
         });
