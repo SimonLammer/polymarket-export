@@ -3,10 +3,40 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Polymarket Export</title>
+    <title>Polymarket PnL Exporter</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-    <style src="style.css"></style>
+    
+    <!-- 
+      ========================================
+      STYLES (style.css)
+      ========================================
+    -->
+    <style>
+        /* --- style.css --- */
+        body { 
+            font-family: 'Inter', sans-serif; 
+        }
+
+        .loader {
+            border-top-color: transparent;
+            -webkit-animation: spinner 1.5s linear infinite;
+            animation: spinner 1.5s linear infinite;
+        }
+
+        @keyframes spinner {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        .scrollbar-hide::-webkit-scrollbar {
+            display: none;
+        }
+        .scrollbar-hide {
+            -ms-overflow-style: none;
+            scrollbar-width: none;
+        }
+    </style>
 </head>
 <body class="bg-gray-50 text-gray-800 min-h-screen flex flex-col items-center py-10 px-4">
 
@@ -23,11 +53,13 @@
         <section class="p-6 border-b border-gray-100 bg-gray-50/50">
             <form id="config-form" class="grid grid-cols-1 md:grid-cols-4 gap-4 items-end">
                 
-                <!-- Address Input -->
+                <!-- Address/Username Input -->
                 <div class="md:col-span-2">
-                    <label for="input-address" class="block text-sm font-medium text-gray-700 mb-1">User Address (0x...)</label>
-                    <input type="text" id="input-address" name="user_address" 
-                        placeholder="0x..." 
+                    <label for="input-identifier" class="block text-sm font-medium text-gray-700 mb-1">
+                        User Address (0x...) or Username
+                    </label>
+                    <input type="text" id="input-identifier" name="user_identifier" 
+                        placeholder="e.g. @Username or 0x123abc..." 
                         class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors"
                         required>
                 </div>
@@ -60,18 +92,48 @@
             </form>
             
             <!-- Feedback -->
-            <div id="error-display" class="hidden mt-4 p-3 bg-red-100 border border-red-200 text-red-700 rounded-md text-sm"></div>
+            <div class="mt-4 flex flex-col gap-2">
+                <div id="error-display" class="hidden p-3 bg-red-100 border border-red-200 text-red-700 rounded-md text-sm"></div>
+                
+                <!-- Resolved Info -->
+                <div id="resolved-info" class="hidden flex items-center gap-1 text-xs text-gray-500 px-1">
+                    <svg class="w-3 h-3 text-blue-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
+                    <span>Resolved: <span id="resolved-address-text" class="font-mono text-gray-600 font-medium"></span></span>
+                </div>
+            </div>
         </section>
 
         <!-- Visualization Section -->
         <section id="results-view" class="hidden">
-            <div class="px-6 py-4 flex justify-between items-center border-b border-gray-100">
-                <h2 class="text-lg font-semibold text-gray-800">Performance</h2>
-                <button id="btn-export" class="bg-green-600 hover:bg-green-700 text-white text-sm font-medium py-2 px-4 rounded-md transition-colors flex items-center gap-2">
-                    <!-- Download Icon -->
-                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"></path></svg>
-                    Export CSV
-                </button>
+            <div class="px-6 py-4 border-b border-gray-100">
+                <div class="flex justify-between items-center mb-4">
+                    <h2 class="text-lg font-semibold text-gray-800">Portfolio Summary</h2>
+                    <button id="btn-export" class="bg-green-600 hover:bg-green-700 text-white text-sm font-medium py-2 px-4 rounded-md transition-colors flex items-center gap-2">
+                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"></path></svg>
+                        Export CSV
+                    </button>
+                </div>
+
+                <!-- Summary Cards -->
+                <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                    <!-- Cash Card -->
+                    <div class="bg-blue-50 p-4 rounded-lg border border-blue-100">
+                        <div class="text-xs font-semibold text-blue-600 uppercase tracking-wide mb-1">Cash Balance (USDC)</div>
+                        <div id="display-cash" class="text-2xl font-bold text-gray-800">--</div>
+                    </div>
+                    
+                    <!-- Position Card -->
+                    <div class="bg-purple-50 p-4 rounded-lg border border-purple-100">
+                        <div class="text-xs font-semibold text-purple-600 uppercase tracking-wide mb-1">Position Value</div>
+                        <div id="display-positions" class="text-2xl font-bold text-gray-800">--</div>
+                    </div>
+
+                    <!-- Total Card -->
+                    <div class="bg-green-50 p-4 rounded-lg border border-green-100">
+                        <div class="text-xs font-semibold text-green-600 uppercase tracking-wide mb-1">Total Account Value</div>
+                        <div id="display-total" class="text-2xl font-bold text-gray-800">--</div>
+                    </div>
+                </div>
             </div>
 
             <!-- Graph -->
@@ -100,6 +162,416 @@
         Polymarket API Client. Runs 100% locally in browser.
     </footer>
 
-    <script src="script.js"></script>
+    <!-- 
+      ========================================
+      LOGIC (script.js)
+      ========================================
+    -->
+    <script>
+        /* --- script.js --- */
+
+        /**
+         * Configuration & Constants
+         */
+        const CONFIG = {
+            // Polymarket APIs
+            PNL_API_BASE: "https://user-pnl-api.polymarket.com/user-pnl",
+            POSITION_API: "https://data-api.polymarket.com/value",
+            USE_PROXY_FOR_POLYMARKET: false, 
+
+            // Profile Search
+            PROFILE_SEARCH_API: "https://polywallet.info/api/gamma-search",
+            USE_PROXY_FOR_PROFILE: true, 
+
+            // RPC / Blockchain
+            RPC_URL: "https://polygon-rpc.com",
+            USDC_CONTRACT: "0x2791Bca1f2de4661ED88A30C99A7a9449Aa84174",
+
+            // Utilities - Switched to a more robust proxy
+            CORS_PROXY: "https://corsproxy.io/?"
+        };
+
+        /**
+         * PolymarketExporter - Main Application Class
+         */
+        class PolymarketExporter {
+            constructor() {
+                // State
+                this.data = [];
+                this.chart = null;
+                this.currentValues = {
+                    cash: 0,
+                    positions: 0
+                };
+
+                // DOM Elements
+                this.dom = {
+                    form: document.getElementById('config-form'),
+                    inputs: {
+                        identifier: document.getElementById('input-identifier'),
+                        interval: document.getElementById('input-interval'),
+                        fidelity: document.getElementById('input-fidelity')
+                    },
+                    buttons: {
+                        load: document.getElementById('btn-load'),
+                        export: document.getElementById('btn-export')
+                    },
+                    ui: {
+                        spinner: document.getElementById('spinner'),
+                        error: document.getElementById('error-display'),
+                        results: document.getElementById('results-view'),
+                        tableBody: document.getElementById('table-body'),
+                        chartCanvas: document.getElementById('chart-canvas').getContext('2d'),
+                        resolvedInfo: document.getElementById('resolved-info'),
+                        resolvedAddressText: document.getElementById('resolved-address-text'),
+                        // Summary Elements
+                        displayCash: document.getElementById('display-cash'),
+                        displayPositions: document.getElementById('display-positions'),
+                        displayTotal: document.getElementById('display-total')
+                    }
+                };
+
+                this.initListeners();
+            }
+
+            initListeners() {
+                this.dom.form.addEventListener('submit', (e) => this.handleSubmit(e));
+                this.dom.buttons.export.addEventListener('click', () => this.handleExport());
+            }
+
+            // --- Logic: Data Fetching & Processing ---
+
+            async handleSubmit(e) {
+                e.preventDefault();
+                this.resetUI();
+
+                const rawInput = this.dom.inputs.identifier.value.trim();
+                const interval = this.dom.inputs.interval.value.trim() || 'all';
+                const fidelity = this.dom.inputs.fidelity.value.trim() || '1d';
+
+                this.setLoading(true);
+
+                try {
+                    // 1. Resolve Address
+                    const address = await this.resolveAddress(rawInput);
+
+                    // 2. Fetch All Data Concurrently (PnL History, Cash, Position Value)
+                    const [pnlData, cashBalance, posValue] = await Promise.all([
+                        this.fetchPnLData({ address, interval, fidelity }),
+                        this.fetchCashBalance(address).catch(err => { console.warn(err); return 0; }),
+                        this.fetchPositionValue(address).catch(err => { console.warn(err); return 0; })
+                    ]);
+
+                    // 3. Process Data
+                    this.data = this.processPnLData(pnlData);
+                    this.currentValues = {
+                        cash: cashBalance,
+                        positions: posValue
+                    };
+                    
+                    if (this.data.length === 0) throw new Error("No PnL history returned for this query.");
+
+                    this.renderUI();
+                } catch (error) {
+                    console.error(error);
+                    this.showError(error.message);
+                } finally {
+                    this.setLoading(false);
+                }
+            }
+
+            async resolveAddress(input) {
+                // Case 1: Ethereum Address (starts with 0x)
+                if (input.startsWith('0x')) {
+                    this.hideResolvedAddress();
+                    return input;
+                }
+
+                // Case 2: Username (Assume username if not address)
+                let query = input;
+                if (!query.startsWith('@')) {
+                    query = '@' + query;
+                }
+
+                const url = new URL(CONFIG.PROFILE_SEARCH_API);
+                url.searchParams.append('q', query);
+                url.searchParams.append('search_profiles', 'true');
+                url.searchParams.append('limit_per_type', '1');
+                url.searchParams.append('optimized', 'true');
+
+                const response = await this.fetchUrl(url.toString(), CONFIG.USE_PROXY_FOR_PROFILE);
+                
+                if (!response.ok) throw new Error("Failed to resolve username. Profile API error.");
+                
+                const data = await response.json();
+                
+                if (data.profiles && data.profiles.length > 0) {
+                    const profile = data.profiles[0];
+                    if (profile.proxyWallet) {
+                        this.showResolvedAddress(profile.proxyWallet);
+                        return profile.proxyWallet;
+                    }
+                }
+                throw new Error(`Username "${input}" not found or has no associated wallet.`);
+            }
+
+            async fetchPnLData({ address, interval, fidelity }) {
+                const url = new URL(CONFIG.PNL_API_BASE);
+                url.searchParams.append('user_address', address);
+                url.searchParams.append('interval', interval);
+                url.searchParams.append('fidelity', fidelity);
+
+                const response = await this.fetchUrl(url.toString(), CONFIG.USE_PROXY_FOR_POLYMARKET);
+                
+                if (!response.ok) {
+                    throw new Error(`PnL API Error: ${response.status} ${response.statusText}.`);
+                }
+                return await response.json();
+            }
+
+            async fetchPositionValue(address) {
+                // Endpoint: https://data-api.polymarket.com/value?user=ADDRESS
+                const url = new URL(CONFIG.POSITION_API);
+                url.searchParams.append('user', address);
+
+                const response = await this.fetchUrl(url.toString(), CONFIG.USE_PROXY_FOR_POLYMARKET);
+                
+                if (!response.ok) throw new Error("Position API Error");
+                
+                const json = await response.json();
+                
+                // Expects: [{"user":"...","value":245.8255}]
+                if (Array.isArray(json) && json.length > 0 && json[0].value !== undefined) {
+                    return parseFloat(json[0].value);
+                }
+                return 0;
+            }
+
+            async fetchCashBalance(address) {
+                if (!address) throw new Error("fetchCashBalance: Address is missing");
+
+                const paddedAddress = address.replace('0x', '').padStart(64, '0');
+                const data = `0x70a08231${paddedAddress}`; // balanceOf(address)
+
+                const response = await fetch(CONFIG.RPC_URL, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        jsonrpc: '2.0',
+                        id: 1,
+                        method: 'eth_call',
+                        params: [{
+                            to: CONFIG.USDC_CONTRACT,
+                            data: data
+                        }, 'latest']
+                    })
+                });
+
+                if (!response.ok) throw new Error("RPC network error");
+
+                const json = await response.json();
+                
+                if (json.error) throw new Error(json.error.message);
+                
+                const hexVal = json.result;
+                // USDC has 6 decimals
+                const balance = parseInt(hexVal, 16) / 1000000;
+                
+                return balance;
+            }
+
+            // Unified fetch helper
+            async fetchUrl(targetUrl, useProxy) {
+                let fetchUrl = targetUrl;
+                if (useProxy) {
+                    // Update: corsproxy.io uses ?url format
+                    fetchUrl = CONFIG.CORS_PROXY + encodeURIComponent(targetUrl);
+                }
+
+                try {
+                    return await fetch(fetchUrl);
+                } catch (err) {
+                    let msg = "Network Error.";
+                    if (useProxy) msg += " (Proxy failed)";
+                    else msg += " (Direct connection failed. Check CORS or API status)";
+                    throw new Error(msg + " " + err.message);
+                }
+            }
+
+            processPnLData(json) {
+                if (!Array.isArray(json)) {
+                     throw new Error("Invalid API response format. Expected an array.");
+                }
+
+                return json.map(item => {
+                    // API returns 't' in seconds, JS needs milliseconds
+                    const date = new Date(item.t * 1000);
+                    return {
+                        timestamp: item.t,
+                        // Format: YYYY-MM-DD
+                        dateStr: date.toISOString().split('T')[0], 
+                        value: item.p
+                    };
+                });
+            }
+
+            handleExport() {
+                if (!this.data.length) return;
+
+                const csvHeader = "Date,Net Value\n";
+                const csvRows = this.data.map(r => `${r.dateStr},${r.value}`).join("\n");
+                const csvContent = csvHeader + csvRows;
+
+                const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+                const url = URL.createObjectURL(blob);
+                
+                const link = document.createElement('a');
+                link.href = url;
+                link.download = `polymarket_export_${new Date().toISOString().slice(0,10)}.csv`;
+                link.style.display = 'none';
+                
+                document.body.appendChild(link);
+                link.click();
+                document.body.removeChild(link);
+            }
+
+            // --- Logic: UI Rendering ---
+
+            renderUI() {
+                this.renderSummary();
+                this.renderTable();
+                this.renderChart();
+                this.dom.ui.results.classList.remove('hidden');
+            }
+
+            renderSummary() {
+                const fmt = (num) => '$' + num.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+                
+                const cash = this.currentValues.cash;
+                const pos = this.currentValues.positions;
+                const total = cash + pos;
+
+                this.dom.ui.displayCash.textContent = fmt(cash);
+                this.dom.ui.displayPositions.textContent = fmt(pos);
+                this.dom.ui.displayTotal.textContent = fmt(total);
+            }
+
+            renderTable() {
+                this.dom.ui.tableBody.innerHTML = '';
+                // Clone array and reverse to show newest first in table
+                const reversedData = [...this.data].reverse();
+
+                const fragment = document.createDocumentFragment();
+                reversedData.forEach(row => {
+                    const tr = document.createElement('tr');
+                    tr.className = "hover:bg-gray-50 transition-colors";
+                    tr.innerHTML = `
+                        <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">${row.dateStr}</td>
+                        <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900 text-right font-mono font-medium">
+                            ${row.value.toFixed(2)}
+                        </td>
+                    `;
+                    fragment.appendChild(tr);
+                });
+                this.dom.ui.tableBody.appendChild(fragment);
+            }
+
+            renderChart() {
+                if (this.chart) this.chart.destroy();
+
+                const labels = this.data.map(d => d.dateStr);
+                const values = this.data.map(d => d.value);
+                
+                const isProfit = values[values.length - 1] >= values[0];
+                const color = isProfit ? 'rgb(22, 163, 74)' : 'rgb(220, 38, 38)';
+                const bg = isProfit ? 'rgba(22, 163, 74, 0.1)' : 'rgba(220, 38, 38, 0.1)';
+
+                this.chart = new Chart(this.dom.ui.chartCanvas, {
+                    type: 'line',
+                    data: {
+                        labels: labels,
+                        datasets: [{
+                            label: 'Net Value',
+                            data: values,
+                            borderColor: color,
+                            backgroundColor: bg,
+                            borderWidth: 2,
+                            fill: true,
+                            tension: 0.2,
+                            pointRadius: 0,
+                            pointHitRadius: 10
+                        }]
+                    },
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        interaction: { intersect: false, mode: 'index' },
+                        plugins: {
+                            legend: { display: false },
+                            tooltip: {
+                                displayColors: false,
+                                callbacks: {
+                                    label: (ctx) => ` $${ctx.parsed.y.toFixed(2)}`
+                                }
+                            }
+                        },
+                        scales: {
+                            x: { 
+                                grid: { display: false },
+                                ticks: { maxTicksLimit: 6 }
+                            },
+                            y: { 
+                                grid: { color: '#f3f4f6' }
+                            }
+                        }
+                    }
+                });
+            }
+
+            // --- Logic: UI Utilities ---
+
+            setLoading(isLoading) {
+                this.dom.buttons.load.disabled = isLoading;
+                if (isLoading) {
+                    this.dom.buttons.load.classList.add('opacity-75', 'cursor-not-allowed');
+                    this.dom.ui.spinner.classList.remove('hidden');
+                } else {
+                    this.dom.buttons.load.classList.remove('opacity-75', 'cursor-not-allowed');
+                    this.dom.ui.spinner.classList.add('hidden');
+                }
+            }
+
+            resetUI() {
+                this.dom.ui.error.classList.add('hidden');
+                this.dom.ui.error.textContent = '';
+                this.dom.ui.results.classList.add('hidden');
+                // Reset Summary
+                this.dom.ui.displayCash.textContent = '--';
+                this.dom.ui.displayPositions.textContent = '--';
+                this.dom.ui.displayTotal.textContent = '--';
+                this.data = [];
+            }
+
+            showError(msg) {
+                this.dom.ui.error.textContent = msg;
+                this.dom.ui.error.classList.remove('hidden');
+            }
+
+            showResolvedAddress(addr) {
+                this.dom.ui.resolvedAddressText.textContent = addr;
+                this.dom.ui.resolvedInfo.classList.remove('hidden');
+            }
+
+            hideResolvedAddress() {
+                this.dom.ui.resolvedInfo.classList.add('hidden');
+            }
+        }
+
+        // Initialize App
+        document.addEventListener('DOMContentLoaded', () => {
+            new PolymarketExporter();
+        });
+
+    </script>
 </body>
 </html>
